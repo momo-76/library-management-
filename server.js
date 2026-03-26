@@ -1,86 +1,76 @@
 const express = require('express')
-const Database = require('better-sqlite3')
+const sqlite3 = require('sqlite3').verbose()
 const cors = require('cors')
 const path = require('path')
 
 const app = express()
-const db = new Database('library.db')
+const db = new sqlite3.Database('library.db')
 
 app.use(cors())
 app.use(express.json())
 app.use(express.static(path.join(__dirname, 'public')))
 
-db.exec(`
-  CREATE TABLE IF NOT EXISTS books (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    title TEXT NOT NULL,
-    author TEXT NOT NULL,
-    isbn TEXT,
-    available INTEGER DEFAULT 1
-  );
-  CREATE TABLE IF NOT EXISTS members (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    email TEXT
-  );
-  CREATE TABLE IF NOT EXISTS issued (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    book_id INTEGER,
-    member_id INTEGER,
-    issue_date TEXT,
-    FOREIGN KEY(book_id) REFERENCES books(id),
-    FOREIGN KEY(member_id) REFERENCES members(id)
-  );
-`)
-
-app.get('/books', (req, res) => {
-  const books = db.prepare('SELECT * FROM books').all()
-  res.json(books)
+db.serialize(function() {
+  db.run('CREATE TABLE IF NOT EXISTS books (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT NOT NULL, author TEXT NOT NULL, isbn TEXT, available INTEGER DEFAULT 1)')
+  db.run('CREATE TABLE IF NOT EXISTS members (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, email TEXT)')
+  db.run('CREATE TABLE IF NOT EXISTS issued (id INTEGER PRIMARY KEY AUTOINCREMENT, book_id INTEGER, member_id INTEGER, issue_date TEXT)')
 })
 
-app.post('/books', (req, res) => {
-  const { title, author, isbn } = req.body
-  const result = db.prepare(
-    'INSERT INTO books (title, author, isbn) VALUES (?, ?, ?)'
-  ).run(title, author, isbn)
-  res.json({ id: result.lastInsertRowid, message: 'Book added!' })
+app.get('/books', function(req, res) {
+  db.all('SELECT * FROM books', function(err, rows) {
+    res.json(rows)
+  })
 })
 
-app.delete('/books/:id', (req, res) => {
-  db.prepare('DELETE FROM books WHERE id = ?').run(req.params.id)
-  res.json({ message: 'Book deleted!' })
+app.post('/books', function(req, res) {
+  var title = req.body.title
+  var author = req.body.author
+  var isbn = req.body.isbn
+  db.run('INSERT INTO books (title, author, isbn) VALUES (?, ?, ?)', [title, author, isbn], function(err) {
+    res.json({ id: this.lastID, message: 'Book added!' })
+  })
 })
 
-app.get('/members', (req, res) => {
-  const members = db.prepare('SELECT * FROM members').all()
-  res.json(members)
+app.delete('/books/:id', function(req, res) {
+  db.run('DELETE FROM books WHERE id = ?', [req.params.id], function(err) {
+    res.json({ message: 'Book deleted!' })
+  })
 })
 
-app.post('/members', (req, res) => {
-  const { name, email } = req.body
-  const result = db.prepare(
-    'INSERT INTO members (name, email) VALUES (?, ?)'
-  ).run(name, email)
-  res.json({ id: result.lastInsertRowid, message: 'Member added!' })
+app.get('/members', function(req, res) {
+  db.all('SELECT * FROM members', function(err, rows) {
+    res.json(rows)
+  })
 })
 
-app.post('/issue', (req, res) => {
-  const { book_id, member_id } = req.body
-  const date = new Date().toISOString().split('T')[0]
-  db.prepare(
-    'INSERT INTO issued (book_id, member_id, issue_date) VALUES (?, ?, ?)'
-  ).run(book_id, member_id, date)
-  db.prepare('UPDATE books SET available = 0 WHERE id = ?').run(book_id)
-  res.json({ message: 'Book issued!' })
+app.post('/members', function(req, res) {
+  var name = req.body.name
+  var email = req.body.email
+  db.run('INSERT INTO members (name, email) VALUES (?, ?)', [name, email], function(err) {
+    res.json({ id: this.lastID, message: 'Member added!' })
+  })
 })
 
-app.post('/return', (req, res) => {
-  const { book_id } = req.body
-  db.prepare('DELETE FROM issued WHERE book_id = ?').run(book_id)
-  db.prepare('UPDATE books SET available = 1 WHERE id = ?').run(book_id)
-  res.json({ message: 'Book returned!' })
+app.post('/issue', function(req, res) {
+  var book_id = req.body.book_id
+  var member_id = req.body.member_id
+  var date = new Date().toISOString().split('T')[0]
+  db.run('INSERT INTO issued (book_id, member_id, issue_date) VALUES (?, ?, ?)', [book_id, member_id, date], function(err) {
+    db.run('UPDATE books SET available = 0 WHERE id = ?', [book_id], function(err) {
+      res.json({ message: 'Book issued!' })
+    })
+  })
 })
 
-app.listen(3000, () => {
+app.post('/return', function(req, res) {
+  var book_id = req.body.book_id
+  db.run('DELETE FROM issued WHERE book_id = ?', [book_id], function(err) {
+    db.run('UPDATE books SET available = 1 WHERE id = ?', [book_id], function(err) {
+      res.json({ message: 'Book returned!' })
+    })
+  })
+})
+
+app.listen(3000, function() {
   console.log('Server running at http://localhost:3000')
 })
