@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Library Management System</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>Library Management System</h1>
+  </header>
+  <nav>
+    <button onclick="showSection('books')">Books</button>
+    <button onclick="showSection('members')">Members</button>
+    <button onclick="showSection('issue')">Issue / Return</button>
+  </nav>
+  <section id="books">
+    <h2>All Books</h2>
+    <div class="form-box">
+      <input id="title" placeholder="Book Title" />
+      <input id="author" placeholder="Author" />
+      <input id="isbn" placeholder="ISBN" />
+      <button onclick="addBook()">Add Book</button>
+    </div>
+    <table>
+      <thead>
+        <tr><th>ID</th><th>Title</th><th>Author</th><th>ISBN</th><th>Status</th><th>Action</th></tr>
+      </thead>
+      <tbody id="books-table"></tbody>
+    </table>
+  </section>
+  <section id="members" class="hidden">
+    <h2>Members</h2>
+    <div class="form-box">
+      <input id="member-name" placeholder="Member Name" />
+      <input id="member-email" placeholder="Email" />
+      <button onclick="addMember()">Add Member</button>
+    </div>
+    <table>
+      <thead>
+        <tr><th>ID</th><th>Name</th><th>Email</th></tr>
+      </thead>
+      <tbody id="members-table"></tbody>
+    </table>
+  </section>
+  <section id="issue" class="hidden">
+    <h2>Issue a Book</h2>
+    <div class="form-box">
+      <input id="issue-book-id" placeholder="Book ID" />
+      <input id="issue-member-id" placeholder="Member ID" />
+      <button onclick="issueBook()">Issue Book</button>
+    </div>
+    <h2>Return a Book</h2>
+    <div class="form-box">
+      <input id="return-book-id" placeholder="Book ID" />
+      <button onclick="returnBook()">Return Book</button>
+    </div>
+  </section>
+  <script src="app.js"></script>
+</body>
+</html>
